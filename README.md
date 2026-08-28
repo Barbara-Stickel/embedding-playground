@@ -71,3 +71,31 @@ This lets us compare:
 The main purpose of the project is educational: understand how text is converted into vectors, how vector similarity works, how kNN uses those vectors, and how training can change the geometry of an embedding space.
 
 The implementation should stay small enough that the important operations remain visible and understandable.
+
+## Running the code
+
+### Set-up
+
+
+```bash
+cd /Users/barbaraadrien/Code/embedding-playground
+
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install -e .
+```
+
+### Run it
+
+```bash
+embedding-playground
+```
+or 
+
+```bash
+python src/main.py
+```
+
+The first run will download and cache the MiniLM model from Hugging Face, so it requires internet access.

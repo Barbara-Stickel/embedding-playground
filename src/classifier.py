@@ -7,7 +7,7 @@ class NearestNeighborsClassifier:
 
         self.training_embeddings = training_embeddings
 
-        self.fit()
+        self.fit(training_embeddings)
 
     def fit(self, training_embeddings):
 
@@ -24,9 +24,10 @@ class NearestNeighborsClassifier:
             new_embedding.reshape(1, -1), return_distance=True
         )
 
-        similarities = [1-d for d in distances]
+        similarities = 1 - distances[0]
 
-        return similarities, indices
+        return similarities, indices[0]
+
 
 def classify(embeddings_train, embeddings_test, y_train):
 
@@ -38,16 +39,12 @@ def classify(embeddings_train, embeddings_test, y_train):
         similarities, indices = classifier.classify(new_embedding)
 
         scores = {}
-        for i, s in list(zip(similarities, indices)):
-            category = scores.get(y_train.loc[i], None)
-            if category is None:
-                scores[category] = 0
+        for index, similarity in zip(indices, similarities):
+            category = y_train.iloc[index]
+            scores[category] = scores.get(category, 0) + 1 #similarity
 
-            scores[category] += s
-
-        best_category = max(scores, scores.get)
+        best_category = max(scores, key=scores.get)
 
         y_test_predict.append(best_category)
 
     return y_test_predict
-        

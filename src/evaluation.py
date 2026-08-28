@@ -7,6 +7,8 @@ def evaluate(y_test, y_test_predict):
     for y, y_predict in list(zip(y_test, y_test_predict)):
         if y == y_predict:
             true_value += 1
+        else:
+            print(f"y_predict: {y_predict}; y: {y}")
 
         total_values += 1
 
