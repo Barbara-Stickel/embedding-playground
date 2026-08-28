@@ -98,4 +98,31 @@ or
 python src/main.py
 ```
 
-The first run will download and cache the MiniLM model from Hugging Face, so it requires internet access.
+The default configuration uses
+[`nomic-ai/nomic-embed-text-v1`](https://huggingface.co/nomic-ai/nomic-embed-text-v1).
+The first run downloads and caches the model from Hugging Face, so it requires
+internet access.
+
+Nomic requires every input to include a task instruction prefix. This project
+classifies expenses, so `config.yaml` applies `classification:` to both the
+training and test inputs. The stored `ExpenseRecord.text` is not changed; the
+prefix is added only when the text is sent to the embedding model.
+
+The model setup is configurable in `config.yaml`:
+
+```yaml
+model:
+  name: nomic
+  batch_size: 32
+  device: auto
+  prefix: classification
+  trust_remote_code: true
+```
+
+With `device: auto`, PyTorch uses the Apple GPU through MPS when it is
+available and falls back to the CPU otherwise. Set it explicitly to `mps` or
+`cpu` to override that behavior.
+
+To return to the original model, the compact `model: mini` setting is still
+supported. You can also set `path` to a Hugging Face model ID instead of using
+one of the `name` aliases.

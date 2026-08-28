@@ -1,12 +1,26 @@
 data_processing:
   remove_misc: true
-  split_data: timeseries # timeseries # random
+  split_data: random # timeseries # random
 input: merchant_and_price # merchant_only
 category: primary
-model: mini
 
 classifier:
   name: nearest_neighbors
   options:
     n_neighbors: 10
     metric: cosine
+
+
+model:
+  name: mini
+  batch_size: 32
+  device: auto # Uses Apple MPS when available, otherwise CPU.
+
+# model:
+#   name: nomic
+#   batch_size: 32
+#   device: auto # Uses Apple MPS when available, otherwise CPU.
+#   # Nomic requires a task instruction prefix.
+#   prefix: classification
+#   # Required for Nomic on Transformers versions older than 5.5.0.
+#   trust_remote_code: true
