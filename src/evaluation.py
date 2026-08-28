@@ -13,6 +13,7 @@ def print_incorrect_predictions(records: list[ExpenseRecord]) -> None:
         show_lines=True,
     )
     table.add_column("#", justify="right", style="dim", width=4)
+    table.add_column("Date", style="dim", width=10)
     table.add_column("Text", max_width=60)
     table.add_column("Predicted", style="yellow", max_width=25)
     table.add_column("Actual", style="cyan", max_width=25)
@@ -20,6 +21,7 @@ def print_incorrect_predictions(records: list[ExpenseRecord]) -> None:
     for index, record in enumerate(records, start=1):
         table.add_row(
             str(index),
+            record.date.strftime("%m/%d/%Y"),
             record.text,
             record.predicted_category or "—",
             record.category,

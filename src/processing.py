@@ -97,7 +97,10 @@ def process_data(df, remove_misc=True):
         "Type 1": "category_1",
         "Details": "category_2"
     })
+
+    df["date"] = pd.to_datetime(df["date"], format="%d/%m/%Y")
     df = df.sort_values("date")
+
     text_columns = df.select_dtypes(include=["object", "string"]).columns
     df[text_columns] = df[text_columns].apply(
         lambda column: column.str.lower()
@@ -111,7 +114,11 @@ def process_data(df, remove_misc=True):
 
 def create_expense_records(df) -> list[ExpenseRecord]:
     return [
-        ExpenseRecord(text=row.input, category=row.category)
+        ExpenseRecord(
+            date=row.date.date(),
+            text=row.input,
+            category=row.category
+        )
         for row in df.itertuples()
     ]
 
