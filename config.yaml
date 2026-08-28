@@ -1,0 +1,11 @@
+data_processing:
+  remove_misc: true
+input: merchant_only
+category: primary
+model: mini
+
+classifier:
+  name: nearest_neighbors
+  options:
+    n_neighbors: 10
+    metric: cosine

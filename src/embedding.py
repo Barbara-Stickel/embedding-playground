@@ -7,6 +7,17 @@ MODELS = {
     "mini": 'sentence-transformers/all-MiniLM-L6-v2'
 }
 
+
+def create_model_name(name: str) -> str:
+    try:
+        return MODELS[name]
+    except KeyError as error:
+        choices = ", ".join(MODELS)
+        raise ValueError(
+            f"Unknown model '{name}'. Available choices: {choices}"
+        ) from error
+
+
 # Mean Pooling - Take attention mask into account for correct averaging
 def mean_pooling(model_output, attention_mask):
     token_embeddings = model_output[0] # First element of model_output contains all token embeddings
@@ -15,12 +26,11 @@ def mean_pooling(model_output, attention_mask):
 
 
 def embed(sentences: list[str], model_name: str):
-
-    model_name = MODELS[model_name]
+    model_path = create_model_name(model_name)
 
     # Load model from HuggingFace Hub
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModel.from_pretrained(model_path)
 
     # Tokenize sentences
     encoded_input = tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')

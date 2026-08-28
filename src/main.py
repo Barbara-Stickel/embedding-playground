@@ -1,18 +1,37 @@
+from pathlib import Path
+
+import yaml
 
 from processing import get_data
 from embedding import embed
 from classifier import classify
 from evaluation import evaluate
 
-MODEL_NAME = "mini"
+
+CONFIG_FILE = Path(__file__).resolve().parent.parent / "config.yaml"
+
+
+def read_config():
+    with CONFIG_FILE.open() as config_file:
+        return yaml.safe_load(config_file)
+
 
 def main():
-    X_train, X_test, y_train, y_test = get_data()
+    config = read_config()
 
-    embeddings_train = embed(X_train.to_list(), model_name=MODEL_NAME)
-    embeddings_test = embed(X_test.to_list(), model_name=MODEL_NAME)
+    X_train, X_test, y_train, y_test = get_data(
+        config["input"], config["category"], config["data_processing"]
+    )
 
-    y_test_predict = classify(embeddings_train, embeddings_test, y_train)
+    embeddings_train = embed(X_train.to_list(), model_name=config["model"])
+    embeddings_test = embed(X_test.to_list(), model_name=config["model"])
+
+    y_test_predict = classify(
+        embeddings_train,
+        embeddings_test,
+        y_train,
+        config["classifier"],
+    )
 
     result = evaluate(y_test, y_test_predict)
 
