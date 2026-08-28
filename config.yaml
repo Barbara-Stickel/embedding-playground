@@ -1,5 +1,6 @@
 data_processing:
   remove_misc: true
+  split_data: timeseries # random
 input: merchant_only
 category: primary
 model: mini

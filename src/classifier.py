@@ -1,4 +1,7 @@
+import numpy as np
 from sklearn.neighbors import NearestNeighbors
+
+from data_types import ExpenseDataset, ExpenseRecord
 
 
 class NearestNeighborsClassifier:
@@ -50,31 +53,32 @@ def create_classifier(name: str, training_embeddings, **options):
     return classifier_class(training_embeddings, **options)
 
 
-def classify(
-    embeddings_train,
-    embeddings_test,
-    y_train,
-    classifier_config: dict,
-):
+def get_embeddings(records: list[ExpenseRecord]) -> np.ndarray:
+    embeddings = [record.embedding for record in records]
+    if any(embedding is None for embedding in embeddings):
+        raise ValueError("All records must be embedded before classification")
+
+    return np.stack(embeddings)
+
+
+def classify(data: ExpenseDataset, classifier_config: dict) -> None:
+    training_embeddings = get_embeddings(data.train)
 
     classifier = create_classifier(
         classifier_config["name"],
-        embeddings_train,
+        training_embeddings,
         **classifier_config.get("options", {}),
     )
 
-    y_test_predict = []
+    for record in data.test:
+        if record.embedding is None:
+            raise ValueError("All records must be embedded before classification")
 
-    for new_embedding in embeddings_test:
-        similarities, indices = classifier.classify(new_embedding)
+        similarities, indices = classifier.classify(record.embedding)
 
         scores = {}
         for index, similarity in zip(indices, similarities):
-            category = y_train.iloc[index]
+            category = data.train[index].category
             scores[category] = scores.get(category, 0) + 1 #similarity
 
-        best_category = max(scores, key=scores.get)
-
-        y_test_predict.append(best_category)
-
-    return y_test_predict
+        record.predicted_category = max(scores, key=scores.get)

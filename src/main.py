@@ -19,21 +19,15 @@ def read_config():
 def main():
     config = read_config()
 
-    X_train, X_test, y_train, y_test = get_data(
+    data = get_data(
         config["input"], config["category"], config["data_processing"]
     )
 
-    embeddings_train = embed(X_train.to_list(), model_name=config["model"])
-    embeddings_test = embed(X_test.to_list(), model_name=config["model"])
+    embed(data, model_name=config["model"])
 
-    y_test_predict = classify(
-        embeddings_train,
-        embeddings_test,
-        y_train,
-        config["classifier"],
-    )
+    classify(data, config["classifier"])
 
-    result = evaluate(y_test, y_test_predict)
+    result = evaluate(data)
 
     print(f"result: {result[2]:%} - {result[0]} / {result[1]}")
 

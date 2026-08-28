@@ -2,6 +2,8 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 import torch.nn.functional as F
 
+from data_types import ExpenseDataset, ExpenseRecord
+
 
 MODELS = {
     "mini": 'sentence-transformers/all-MiniLM-L6-v2'
@@ -25,27 +27,39 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def embed(sentences: list[str], model_name: str):
-    model_path = create_model_name(model_name)
+def embed_records(records: list[ExpenseRecord], tokenizer, model) -> None:
+    if not records:
+        return
 
-    # Load model from HuggingFace Hub
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModel.from_pretrained(model_path)
+    sentences = [record.text for record in records]
 
     # Tokenize sentences
-    encoded_input = tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
+    encoded_input = tokenizer(
+        sentences, padding=True, truncation=True, return_tensors='pt'
+    )
 
     # Compute token embeddings
     with torch.no_grad():
         model_output = model(**encoded_input)
 
     # Perform pooling
-    sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
+    sentence_embeddings = mean_pooling(
+        model_output, encoded_input['attention_mask']
+    )
 
     # Normalize embeddings
     sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
 
-    print("Sentence embeddings:")
-    print(sentence_embeddings)
+    for record, embedding in zip(records, sentence_embeddings):
+        record.embedding = embedding.cpu().numpy()
 
-    return sentence_embeddings
+
+def embed(data: ExpenseDataset, model_name: str) -> None:
+    model_path = create_model_name(model_name)
+
+    # Load model from HuggingFace Hub
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModel.from_pretrained(model_path)
+
+    embed_records(data.train, tokenizer, model)
+    embed_records(data.test, tokenizer, model)

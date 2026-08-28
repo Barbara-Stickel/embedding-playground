@@ -5,6 +5,8 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
+from data_types import ExpenseDataset, ExpenseRecord
+
 
 DATA_FOLDER = Path(__file__).resolve().parent.parent / "data"
 
@@ -15,9 +17,11 @@ def read_data(file_name: str | Path) -> pd.DataFrame:
     return pd.read_csv(file_name)
 
 
-def get_data(input_name: str, category_name: str, data_processing_config: dict) -> tuple[
-    pd.Series, pd.Series, pd.Series, pd.Series
-]:
+def get_data(
+    input_name: str,
+    category_name: str,
+    data_processing_config: dict,
+) -> ExpenseDataset:
 
     input_factory = create_input(input_name)
     category_factory = create_category(category_name)
@@ -29,9 +33,7 @@ def get_data(input_name: str, category_name: str, data_processing_config: dict) 
     df["input"] = df.apply(input_factory, axis=1)
     df["category"] = df.apply(category_factory, axis=1)
 
-    X_train, X_test, y_train, y_test = split_train_test(df)
-
-    return X_train, X_test, y_train, y_test
+    return split_train_test(df, split_data=data_processing_config["split_data"])
 
 
 def create_merchant_and_price_input(row):
@@ -39,7 +41,7 @@ def create_merchant_and_price_input(row):
 
 
 def create_merchant_input(row):
-    return f"Merchant: {row['label']}"
+    return str(row['label'])
 
 
 def create_detailed_category(row) -> str:
@@ -96,18 +98,36 @@ def process_data(df, remove_misc=True):
         "Details": "category_2"
     })
     df = df.sort_values("date")
+    text_columns = df.select_dtypes(include=["object", "string"]).columns
+    df[text_columns] = df[text_columns].apply(
+        lambda column: column.str.lower()
+    )
 
-    if remove_misc:    
-        df = df[~df["category_1"].str.contains("Misc")]
+    if remove_misc:
+        df = df[~df["category_1"].str.contains("misc", na=False)]
 
     return df
 
 
-def split_train_test(df):
-    X = df["input"]
-    y = df["category"]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.20, random_state=42
-    )
+def create_expense_records(df) -> list[ExpenseRecord]:
+    return [
+        ExpenseRecord(text=row.input, category=row.category)
+        for row in df.itertuples()
+    ]
 
-    return X_train, X_test, y_train, y_test
+
+def split_train_test(df, split_data: str) -> ExpenseDataset:
+
+    if split_data == "timeseries":
+        split_index = int(len(df) * 0.8)
+        train = df.iloc[:split_index].copy()
+        test = df.iloc[split_index:].copy()
+    else:
+        train, test = train_test_split(
+            df, test_size=0.20, random_state=42
+        )
+
+    return ExpenseDataset(
+        train=create_expense_records(train),
+        test=create_expense_records(test),
+    )
