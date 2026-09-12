@@ -126,3 +126,37 @@ available and falls back to the CPU otherwise. Set it explicitly to `mps` or
 To return to the original model, the compact `model: mini` setting is still
 supported. You can also set `path` to a Hugging Face model ID instead of using
 one of the `name` aliases.
+
+## Fine-tuning a pair or batch
+
+`embedding_training.train` performs one optimizer step. Pass matching text
+pairs and target cosine similarities: `1.0` pulls a pair together, while `0.0`
+makes it orthogonal (use `-1.0` to push it toward opposite directions).
+
+```python
+import torch
+
+from embedding_core import create_model_config, load_model
+from embedding_training import train
+
+config = create_model_config("mini")
+tokenizer, model, device = load_model(config)
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+
+loss = train(
+    ["coffee shop", "coffee beans"],
+    ["local cafe", "hardware store"],
+    [1.0, 0.0],
+    tokenizer,
+    model,
+    optimizer,
+    task_prefix=config.prefix,
+    device=device,
+)
+```
+
+Call `train` for each batch and epoch. It switches the model to training mode,
+clears old gradients, computes normalized mean-pooled embeddings, backpropagates
+the mean-squared cosine-similarity loss, updates the model, and returns the loss
+as a `float`. Call `model.save_pretrained(...)` and
+`tokenizer.save_pretrained(...)` when you want to keep the fine-tuned model.

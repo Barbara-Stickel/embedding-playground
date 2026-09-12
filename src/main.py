@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 
 from processing import get_data
-from embedding import embed
+from embedding_eval import embed
 from classifier import classify
 from evaluation import evaluate
 

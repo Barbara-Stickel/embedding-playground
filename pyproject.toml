@@ -24,4 +24,13 @@ embedding-playground = "main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["classifier", "data_types", "embedding", "evaluation", "main", "processing"]
+py-modules = [
+    "classifier",
+    "data_types",
+    "embedding_core",
+    "embedding_eval",
+    "embedding_training",
+    "evaluation",
+    "main",
+    "processing",
+]
