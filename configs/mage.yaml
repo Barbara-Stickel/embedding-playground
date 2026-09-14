@@ -1,0 +1,31 @@
+dataset:
+  name: mage
+  # Defaults to the CSV files in jiumei/MAGE on Hugging Face.
+  # To use downloaded files, provide all desired splits:
+  # files:
+  #   train: data/mage/train.csv
+  #   validation: data/mage/valid.csv
+  #   test: data/mage/test.csv
+  max_records:
+    train: 2000
+    validation: 500
+    test: 500
+  seed: 42
+
+evaluation:
+  max_incorrect_predictions: 10 # null shows all; 0 hides the table
+
+embedding_cache:
+  enabled: true
+  directory: data/embeddings
+
+classifier:
+  name: nearest_neighbors
+  options:
+    n_neighbors: 10
+    metric: cosine
+
+model:
+  name: mini
+  batch_size: 32
+  device: auto

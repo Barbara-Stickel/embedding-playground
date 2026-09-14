@@ -10,12 +10,14 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "einops>=0.7",
+    "huggingface-hub>=0.20",
     "numpy>=1.26",
     "pandas>=2.2",
     "PyYAML>=6.0",
     "rich>=13.7",
     "scikit-learn>=1.4",
     "torch>=2.2",
+    "tqdm>=4.66",
     "transformers>=4.38",
 ]
 
@@ -27,10 +29,14 @@ package-dir = {"" = "src"}
 py-modules = [
     "classifier",
     "data_types",
+    "embedding_cache",
     "embedding_core",
     "embedding_eval",
     "embedding_training",
     "evaluation",
     "main",
-    "processing",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["data_processing*"]

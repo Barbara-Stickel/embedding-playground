@@ -1,7 +1,8 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+from tqdm import tqdm
 
-from data_types import ExpenseDataset, ExpenseRecord
+from data_types import TextDataset, TextRecord
 
 
 class NearestNeighborsClassifier:
@@ -53,7 +54,7 @@ def create_classifier(name: str, training_embeddings, **options):
     return classifier_class(training_embeddings, **options)
 
 
-def get_embeddings(records: list[ExpenseRecord]) -> np.ndarray:
+def get_embeddings(records: list[TextRecord]) -> np.ndarray:
     embeddings = [record.embedding for record in records]
     if any(embedding is None for embedding in embeddings):
         raise ValueError("All records must be embedded before classification")
@@ -61,7 +62,7 @@ def get_embeddings(records: list[ExpenseRecord]) -> np.ndarray:
     return np.stack(embeddings)
 
 
-def classify(data: ExpenseDataset, classifier_config: dict) -> None:
+def classify(data: TextDataset, classifier_config: dict) -> None:
     training_embeddings = get_embeddings(data.train)
 
     classifier = create_classifier(
@@ -70,7 +71,7 @@ def classify(data: ExpenseDataset, classifier_config: dict) -> None:
         **classifier_config.get("options", {}),
     )
 
-    for record in data.test:
+    for record in tqdm(data.test, desc="Classifying test records", unit="record", dynamic_ncols=True):
         if record.embedding is None:
             raise ValueError("All records must be embedded before classification")
 
@@ -78,7 +79,7 @@ def classify(data: ExpenseDataset, classifier_config: dict) -> None:
 
         scores = {}
         for index, similarity in zip(indices, similarities):
-            category = data.train[index].category
-            scores[category] = scores.get(category, 0) + 1 #similarity
+            label = data.train[index].label
+            scores[label] = scores.get(label, 0) + 1 #similarity
 
-        record.predicted_category = max(scores, key=scores.get)
+        record.predicted_label = max(scores, key=scores.get)

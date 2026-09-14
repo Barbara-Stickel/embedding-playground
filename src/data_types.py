@@ -1,19 +1,20 @@
-from dataclasses import dataclass
-import datetime
+from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 
 
 @dataclass
-class ExpenseRecord:
-    date: datetime.date
+class TextRecord:
     text: str
-    category: str
+    label: str
     embedding: np.ndarray | None = None
-    predicted_category: str | None = None
+    predicted_label: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
-class ExpenseDataset:
-    train: list[ExpenseRecord]
-    test: list[ExpenseRecord]
+class TextDataset:
+    train: list[TextRecord]
+    test: list[TextRecord]
+    validation: list[TextRecord] = field(default_factory=list)

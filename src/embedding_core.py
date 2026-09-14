@@ -11,6 +11,9 @@ MODELS = {
     "nomic": "nomic-ai/nomic-embed-text-v1",
 }
 
+# Increment this when tokenization, pooling, or normalization behavior changes.
+EMBEDDING_PIPELINE_VERSION = "mean-pooling-l2-v1"
+
 
 @dataclass(frozen=True)
 class EmbeddingModelConfig:
@@ -19,6 +22,8 @@ class EmbeddingModelConfig:
     batch_size: int = 32
     trust_remote_code: bool = False
     device: str = "auto"
+    revision: str | None = None
+    cache_version: str = "1"
 
 
 def create_model_name(name: str) -> str:
@@ -56,6 +61,8 @@ def create_model_config(config: str | dict) -> EmbeddingModelConfig:
         batch_size=batch_size,
         trust_remote_code=config.get("trust_remote_code", False),
         device=config.get("device", "auto"),
+        revision=config.get("revision"),
+        cache_version=str(config.get("cache_version", "1")),
     )
 
 
@@ -81,11 +88,12 @@ def load_model(
 ) -> tuple[Any, Any, torch.device]:
     """Load a tokenizer and model using one shared configuration path."""
     device = create_device(config.device)
+    revision_options = {"revision": config.revision} if config.revision is not None else {}
     tokenizer = AutoTokenizer.from_pretrained(
-        config.path, trust_remote_code=config.trust_remote_code
+        config.path, trust_remote_code=config.trust_remote_code, **revision_options
     )
     model = AutoModel.from_pretrained(
-        config.path, trust_remote_code=config.trust_remote_code
+        config.path, trust_remote_code=config.trust_remote_code, **revision_options
     )
     model.to(device)
     return tokenizer, model, device
