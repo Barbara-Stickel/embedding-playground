@@ -8,6 +8,10 @@ dataset:
   test_size: 0.2
   seed: 42
 
+evaluation:
+  seeds: [42]
+  max_incorrect_predictions: null # null shows all; 0 hides the table
+
 embedding_cache:
   enabled: true
   directory: data/embeddings

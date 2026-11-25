@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from data_types import TextDataset, TextRecord
 from embedding_cache import EmbeddingCache, DEFAULT_DIRECTORY
+from reporting import print_embedding_cache
 from embedding_core import (
     create_model_config,
     encode_texts,
@@ -54,8 +55,7 @@ def restore_cached_embeddings(
     for record in records:
         record.embedding = cached.get(keys[record.text])
     pending = [record for record in unique_records.values() if record.embedding is None]
-    print(f"Embedding cache: {len(cached)} / {len(unique_records)} unique texts reused; {len(pending)} to compute.")
-    print(f"Cache file: {cache.path}")
+    print_embedding_cache(len(cached), len(unique_records), len(pending), cache.path)
     return pending
 
 

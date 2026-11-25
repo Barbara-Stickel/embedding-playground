@@ -3,13 +3,16 @@ dataset:
   subset: all # finance, medicine, open_qa, reddit_eli5, wiki_csai
   # Defaults to the chosen subset's JSONL file on Hugging Face.
   # file: data/hc3/all.jsonl
-  max_questions: null # null uses all questions; all answers in each group are kept
+  max_questions: null # null uses all question groups
   test_size: 0.2
   seed: 42
+  balance_train: true # equal human/machine answers within each training question
+  stratify_source: true # preserve source proportions in the question split
 
 evaluation:
-
-  max_incorrect_predictions: 50 # null shows all; 0 hides the table
+  # Use [42] for one run, or several seeds to compare selections:
+  seeds: [42, 43, 44, 45, 46]
+  max_incorrect_predictions: 0 # null shows all; 0 hides the table
 
 embedding_cache:
   enabled: true

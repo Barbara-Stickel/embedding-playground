@@ -3,10 +3,16 @@ from pathlib import Path
 
 import yaml
 
+from classifier import classify
 from data_processing import load_dataset
 from embedding_eval import embed
-from classifier import classify
-from evaluation import evaluate, print_confusion_matrix
+from evaluation import category_recalls, evaluate
+from reporting import (
+    print_confusion_matrix,
+    print_evaluation_summary,
+    print_run_result,
+    print_run_start,
+)
 
 
 CONFIG_FILE = Path(__file__).resolve().parent.parent / "config.yaml"
@@ -17,39 +23,58 @@ def read_config(path: str | Path = CONFIG_FILE):
         return yaml.safe_load(config_file)
 
 
-def main():
+def parse_arguments():
     parser = argparse.ArgumentParser(description="Experiment with labeled text datasets")
     parser.add_argument("--config", type=Path, default=CONFIG_FILE)
-    args = parser.parse_args()
-    config = read_config(args.config)
+    return parser.parse_args()
 
-    # Existing expense configurations continue to work.
-    dataset_config = config.get("dataset")
-    if dataset_config is None:
-        dataset_config = {
-            "name": "expenses",
-            "input": config["input"],
-            "category": config["category"],
-            **config["data_processing"],
-        }
-    data = load_dataset(dataset_config)
 
-    embed(data, model_name=config["model"], cache_config=config.get("embedding_cache"))
+def run_experiment(config: dict, dataset_config: dict, seed: int, incorrect_limit: int | None):
+    """Load, embed, classify, and evaluate one dataset split."""
+    data = load_dataset({**dataset_config, "seed": seed})
 
+    embed(data, model_name=config["model"], cache_config=config["embedding_cache"])
     classify(data, config["classifier"])
 
-    default_limit = None if dataset_config.get("name", "expenses") == "expenses" else 10
-    result = evaluate(
-        data,
-        max_incorrect_predictions=config.get("evaluation", {}).get(
-            "max_incorrect_predictions", default_limit,
-        ),
-    )
+    result = evaluate(data, max_incorrect_predictions=incorrect_limit)
+    recalls = category_recalls(data.test)
+    balanced_accuracy = sum(recalls.values()) / len(recalls) if recalls else 0.0
+    print_run_result(result, balanced_accuracy)
 
-    print(f"result: {result[2]:%} - {result[0]} / {result[1]}")
-    print_confusion_matrix(data)
+    return data, {
+        "seed": seed,
+        "accuracy": result[2],
+        "balanced_accuracy": balanced_accuracy,
+        "recalls": recalls,
+    }
+
+
+def run_experiments(config: dict, dataset_config: dict) -> None:
+    """Run configured seeds and report their results and the final confusion matrix."""
+    evaluation_config = config["evaluation"]
+    seeds = evaluation_config["seeds"]
+    incorrect_limit = evaluation_config["max_incorrect_predictions"]
+    results = []
+    for index, seed in enumerate(seeds, start=1):
+        print_run_start(index, len(seeds), seed)
+        # Show detailed mistakes only for the final run to keep repeated output small.
+        limit = incorrect_limit if index == len(seeds) else 0
+        data, result = run_experiment(config, dataset_config, seed, limit)
+        results.append(result)
+
+    if len(seeds) > 1:
+        print_evaluation_summary(results)
+
+    title = f"Confusion matrix (final run, seed {seeds[-1]})" if len(seeds) > 1 else "Confusion matrix"
+    print_confusion_matrix(data, title=title)
+
+
+def main():
+    args = parse_arguments()
+    config = read_config(args.config)
+    dataset_config = config["dataset"]
+    run_experiments(config, dataset_config)
 
 
 if __name__ == "__main__":
-
     main()

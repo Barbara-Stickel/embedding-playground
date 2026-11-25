@@ -7,29 +7,24 @@ from .common import require_columns, resolve_source, split_rows, validate_text_l
 from data_types import TextDataset, TextRecord
 
 
-DATA_FOLDER = Path(__file__).resolve().parents[2] / "data"
-
-TRAINING_DATA = DATA_FOLDER / "expenses_training.csv"
-
-
 def read_data(file_name: str | Path) -> pd.DataFrame:
     return pd.read_csv(file_name)
 
 
 def load_expenses(config: dict) -> TextDataset:
-    input_factory = create_input(config.get("input", "merchant_and_price"))
-    category_factory = create_category(config.get("category", "primary"))
-    df = read_data(resolve_source(config.get("file", TRAINING_DATA)))
+    input_factory = create_input(config["input"])
+    category_factory = create_category(config["category"])
+    df = read_data(resolve_source(config["file"]))
     require_columns(df, ["Date", "Description", "Debit", "Type 1", "Details"])
-    df = process_data(df, remove_misc=config.get("remove_misc", True))
+    df = process_data(df, remove_misc=config["remove_misc"])
     df["input"] = df.apply(input_factory, axis=1)
     df["category"] = df.apply(category_factory, axis=1)
     validate_text_labels(df[["input", "category"]].rename(columns={"input": "text", "category": "label"}))
     return split_train_test(
         df,
-        split_data=config.get("split_data", "random"),
-        test_size=config.get("test_size", 0.2),
-        seed=config.get("seed", 42),
+        split_data=config["split_data"],
+        test_size=config["test_size"],
+        seed=config["seed"],
     )
 
 

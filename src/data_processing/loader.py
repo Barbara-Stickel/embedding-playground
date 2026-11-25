@@ -12,7 +12,7 @@ DATASET_LOADERS = {
 
 
 def load_dataset(config: dict) -> TextDataset:
-    name = config.get("name", "expenses")
+    name = config["name"]
     try:
         loader = DATASET_LOADERS[name]
     except KeyError as error:

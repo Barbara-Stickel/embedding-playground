@@ -72,6 +72,12 @@ The main purpose of the project is educational: understand how text is converted
 
 The implementation should stay small enough that the important operations remain visible and understandable.
 
+`src/main.py` contains the entry point and experiment helpers. Its `main()` function
+reads the configuration and starts the experiments; the helpers coordinate dataset
+loading, embedding, classification, and evaluation for each seed.
+Metric calculations live in `src/evaluation.py`; all printing functions live in
+`src/reporting.py`.
+
 ## Running the code
 
 ### Set-up
@@ -140,7 +146,8 @@ embedding-playground --config configs/hc3.yaml
 ```
 
 The same option works with `python src/main.py --config configs/hc3.yaml`.
-The original expense configuration layout is still accepted.
+Start from one of these complete YAML presets. Required experiment settings are read
+directly from the configuration, without compatibility handling for the old layout.
 
 Dataset-specific options live under `dataset`:
 
@@ -151,26 +158,53 @@ dataset:
   max_questions: 2000
   test_size: 0.2
   seed: 42
+  balance_train: true
+  stratify_source: true
 ```
 
 - **Expenses:** keeps the existing CSV, merchant/price inputs, primary or detailed categories, miscellaneous filtering, and random or chronological splits.
 - **[MAGE](https://huggingface.co/datasets/jiumei/MAGE):** reads CSVs and preserves their supplied train, validation, and test assignments. Labels are normalized to `human` (original label `1`) and `machine` (original label `0`). The validation records are retained for future model selection; the current pipeline embeds training and test records and evaluates the test split.
-- **[HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3):** uses each non-empty answer as the input text, labeled `human` or `machine`. Questions are retained only in metadata. Questions are split before answers are expanded; duplicate questions with the same text (ignoring surrounding whitespace) stay together even if their source IDs differ. `max_questions` limits question groups while retaining every non-empty answer in each selected group. Available subsets are `all`, `finance`, `medicine`, `open_qa`, `reddit_eli5`, and `wiki_csai`.
+- **[HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3):** uses answers as input text, labeled `human` or `machine`. Questions are retained only in metadata. Duplicate questions with the same text (ignoring surrounding whitespace) stay together even if their source IDs differ. `max_questions` limits the question groups used for the experiment. Available subsets are `all`, `finance`, `medicine`, `open_qa`, `reddit_eli5`, and `wiki_csai`.
+
+The HC3 preset uses source-stratified question splitting (`stratify_source: true`) and balanced training (`balance_train: true`). For each training question, it randomly keeps `min(human_count, machine_count)` non-empty answers from each category using the configured seed. Thus a question with three human answers and one machine answer contributes one of each; duplicate question rows are balanced together. Training is 50/50 within each question and source. Surplus training answers remain unused, and a training question without both answer types contributes no records. All non-empty answers from test questions are retained; surplus training answers never move into testing. The loader prints training counts and the number of unused answers. Set `balance_train: false` to reproduce the selection of all training answers.
+
+The question split preserves proportions of the sample's sources when each source has enough question groups and both splits can contain all sources. Small samples fall back to a random question split with a message. `test_size` is a fraction of question groups, so the final answer counts need not follow the same fraction after training is balanced.
 
 MAGE and HC3 default to downloading data files through the [Hugging Face cache](https://huggingface.co/docs/huggingface_hub/guides/download). They read the source CSV/JSONL files directly, without running dataset-specific scripts. To use local downloads, set HC3's `file` or MAGE's `files` mapping as shown in the presets. Relative data paths resolve against the project root. Local `data/mage/` and `data/hc3/` folders are ignored by Git.
 
-The sample limits reduce embedding and classification work; complete source files are still downloaded and read before sampling. Set limits to `null` (or omit them) to use all records. Text casing is preserved for MAGE and HC3. Long answers still use the existing tokenizer truncation behavior.
+The sample limits reduce embedding and classification work; complete source files are still downloaded and read before sampling. Set limits to `null` to use all records. Text casing is preserved for MAGE and HC3. Long answers still use the existing tokenizer truncation behavior.
 
 Each run ends with a confusion matrix of counts for the complete test split: rows are actual categories and columns are predicted categories. Correct predictions are on the green diagonal. The matrix includes every category in the dataset, including categories with zero test predictions, and grows to support more than two categories.
 
-MAGE, HC3, and other non-expense datasets display the first 10 incorrect predictions by default. The table title reports how many mistakes there are in total; accuracy always uses the complete test split. Expenses continue to display all mistakes. Override the display limit in any configuration:
+Each YAML file explicitly sets `evaluation.max_incorrect_predictions`. The table title
+reports the total number of mistakes; accuracy always uses the complete test split.
+Use `null` to display all mistakes, `0` to hide them, or an integer to limit them:
 
 ```yaml
 evaluation:
+  seeds: [42]
   max_incorrect_predictions: 10 # null shows all; 0 hides the table
 ```
 
 `data_processing.load_dataset` dispatches to the loader selected by `dataset.name`. Each loader returns a `TextDataset` of `TextRecord` objects with `text`, `label`, optional embeddings and predictions, and dataset-specific `metadata`. Add a new loader and register it in `data_processing/loader.py` to support another labeled-text source.
+
+## Measuring selection variability
+
+Every run reports ordinary accuracy and [balanced accuracy](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html), the mean recall across categories in the test split. Balanced accuracy gives human and machine performance equal weight even though test data retains its original class imbalance.
+
+To measure how sensitive results are to question splits and training-answer selection, run several seeds with the same model and classifier settings:
+
+```yaml
+evaluation:
+  seeds: [42, 43, 44, 45, 46]
+  max_incorrect_predictions: 10
+```
+
+Each distinct seed overrides `dataset.seed` for that run, changing both the question selection/split and balanced training-answer selection. Use `seeds: [42]` for one run; `evaluation.seeds` is required. The summary shows accuracy, balanced accuracy, and recall for each category per seed, followed by their means and sample standard deviations. Keep the same seed list when comparing classifiers.
+
+This is repeated evaluation on randomly shuffled group splits, using sampling without replacement. Classical [bootstrapping](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html) resamples with replacement; it is a different method for estimating uncertainty. These repeated splits can overlap across runs, so the reported spread is descriptive variability rather than a confidence interval. Repeating runs measures and averages the effect of selection choices; it does not remove bias or combine classifiers into an ensemble.
+
+Embedding vectors are reused from the cache. A newly selected answer is computed once if it has not previously been cached. Each seed still performs classification, so a list of five seeds does more classifier work than a single run. Detailed mistakes and the final confusion matrix belong to the final seed; the matrix title identifies that seed. The aggregate table covers all runs.
 
 ## Reusing embeddings
 

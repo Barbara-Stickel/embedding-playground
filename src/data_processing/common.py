@@ -42,14 +42,14 @@ def sample_rows(df: pd.DataFrame, limit: int | None, seed: int) -> pd.DataFrame:
     return df.sample(n=limit, random_state=seed) if len(df) > limit else df
 
 
-def split_rows(df: pd.DataFrame, mode: str, test_size: float = 0.2, seed: int = 42):
+def split_rows(df: pd.DataFrame, mode: str, test_size: float = 0.2, seed: int = 42, stratify=None):
     if mode == "timeseries":
         if not 0 < test_size < 1:
             raise ValueError("test_size must be between 0 and 1")
         index = int(len(df) * (1 - test_size))
         train, test = df.iloc[:index].copy(), df.iloc[index:].copy()
     elif mode == "random":
-        train, test = train_test_split(df, test_size=test_size, random_state=seed)
+        train, test = train_test_split(df, test_size=test_size, random_state=seed, stratify=stratify)
     else:
         raise ValueError(f"Unknown split mode '{mode}'. Available choices: random, timeseries")
     if train.empty or test.empty:

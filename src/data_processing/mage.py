@@ -30,7 +30,7 @@ def load_mage(config: dict) -> TextDataset:
             raise ValueError("MAGE labels must be 0 (machine) or 1 (human)")
         df["label"] = df["label"].map(LABELS)
         validate_text_labels(df)
-        df = sample_rows(df, config.get("max_records", {}).get(split), config.get("seed", 42))
+        df = sample_rows(df, config["max_records"][split], config["seed"])
         splits[split] = [
             TextRecord(text=row.text, label=row.label, metadata={"source": row.src})
             for row in df.itertuples()

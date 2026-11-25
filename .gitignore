@@ -220,3 +220,6 @@ __marimo__/
 .DS_Store
 
 data/expenses_training.csv
+data/mage/
+data/hc3/
+data/embeddings/
